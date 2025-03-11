@@ -313,8 +313,4 @@ def handle_other_messages(message):
         bot.reply_to(message, "Пожалуйста, отправьте голосовое или видеосообщение для распознавания.")
 
 if __name__ == '__main__':
-    while True:			#костыль, в финальной версии разберись
-        try:
-            bot.polling(none_stop=True)
-        except Exception as e:
-            print(e)
+    bot.polling(none_stop=True)
