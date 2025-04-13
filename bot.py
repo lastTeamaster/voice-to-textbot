@@ -3,8 +3,9 @@ import requests
 import speech_recognition as sr
 from pydub import AudioSegment
 import sqlite3
+import os
 
-API_TOKEN = ''	# сюда должен быть вставлен токен бота
+API_TOKEN = '7894814699:AAGdnigZCSkXCfA5i0xO3-qBUnNm75Q5VXs'
 bot = telebot.TeleBot(API_TOKEN)
 
 # Создаем или подключаемся к базе данных
@@ -37,65 +38,113 @@ CREATE TABLE IF NOT EXISTS chat_settings (
 )
 ''')
 conn.commit()
+conn.close()
 
 # Функции для работы с базой данных
 def add_to_whitelist(chat_id, user_id, username):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO whitelist (chat_id, user_id, username) VALUES (?, ?, ?)', (chat_id, user_id, username))
     conn.commit()
+    conn.close()
 
 def remove_from_whitelist(chat_id, user_id, username):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
+
     cursor.execute('DELETE FROM whitelist WHERE chat_id = ? AND user_id = ? AND username = ?', (chat_id, user_id, username))
     conn.commit()
+    conn.close()
 
 def add_to_blacklist(chat_id, user_id, username):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
+
     cursor.execute('INSERT OR IGNORE INTO blacklist (chat_id, user_id, username) VALUES (?, ?, ?)', (chat_id, user_id, username))
     conn.commit()
+    conn.close()
 
 def remove_from_blacklist(chat_id, user_id, username):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
+
     cursor.execute('DELETE FROM blacklist WHERE chat_id = ? AND user_id = ? AND username = ?', (chat_id, user_id, username))
     conn.commit()
+    conn.close()
 
 def show_whitelist(chat_id):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
+
     cursor.execute('SELECT username FROM whitelist WHERE chat_id = ?', (chat_id,))
-    return cursor.fetchall()
+    a = cursor.fetchall()
+    conn.close()
+    return a
 
 def show_blacklist(chat_id):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
+
     cursor.execute('SELECT username FROM blacklist WHERE chat_id = ?', (chat_id,))
-    return cursor.fetchall()
+    a = cursor.fetchall()
+    conn.close()
+    return a
+
 
 def set_chat_mode(chat_id, mode):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO chat_settings (chat_id, mode) VALUES (?, ?)', (chat_id, mode))
     conn.commit()
+    conn.close()
 
 def get_chat_mode(chat_id):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     cursor.execute('SELECT mode FROM chat_settings WHERE chat_id = ?', (chat_id,))
     result = cursor.fetchone()
-    return result[0] if result else 'blacklist'
+    a = result[0] if result else 'blacklist'
+    conn.close()
+    return a
 
 def is_user_in_whitelist(chat_id, user_id):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     cursor.execute('SELECT user_id FROM whitelist WHERE chat_id = ? AND user_id = ?', (chat_id, user_id))
-    return cursor.fetchone() is not None
+    a = cursor.fetchone()
+    conn.close()
+    return a
 
 def is_user_in_blacklist(chat_id, user_id):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     cursor.execute('SELECT user_id FROM blacklist WHERE chat_id = ? AND user_id = ?', (chat_id, user_id))
-    return cursor.fetchone() is not None
-
+    a = cursor.fetchone()
+    conn.close()
+    return a
 
 def get_username(user):
+    conn = sqlite3.connect('user_filters.db', check_same_thread=False)
+    cursor = conn.cursor()
     if user.username:
-        return f"@{user.username}"
+        a = f"@{user.username}"
     else:
-        return f"{user.first_name} {user.last_name}" if user.first_name or user.last_name else "Пользователь без имени"
+        a = f"{user.first_name} {user.last_name}" if user.first_name or user.last_name else "Пользователь без имени"
+    conn.close()
+    return a
 
 def download_audio(file_id, is_video=False):
-    file_info = bot.get_file(file_id)		# Получаем информацию о файле
+    # Получаем информацию о файле
+    file_info = bot.get_file(file_id)
 
-    file_url = f'https://api.telegram.org/file/bot{API_TOKEN}/{file_info.file_path}'	# Формируем URL для скачивания файла
+    # Формируем URL для скачивания файла
+    file_url = f'https://api.telegram.org/file/bot{API_TOKEN}/{file_info.file_path}'
 
-    response = requests.get(file_url)		# Формируем URL для скачивания файла
+    # Скачиваем файл
+    response = requests.get(file_url)
 
     # Сохраняем файл на диск
-    audio_file_path = 'voice_message.ogg' if not is_video else 'video_message.mp4'
+    audio_file_path = str(file_id) + 'voice_message.ogg' if not is_video else str(file_id) + 'video_message.mp4'
     with open(audio_file_path, 'wb') as f:
         f.write(response.content)
 
@@ -115,10 +164,13 @@ def recognize_speech(audio_file_path):
         try:
             # Попробуем распознать на русском
             text = recognizer.recognize_google(audio_data, language='ru-RU')
+            os.remove(audio_file_path)
             return text
         except sr.UnknownValueError:
+            os.remove(audio_file_path)
             return None
         except sr.RequestError as e:
+            os.remove(audio_file_path)
             return f"Ошибка сервиса распознавания: {e}"
 
 
