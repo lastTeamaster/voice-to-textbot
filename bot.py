@@ -5,7 +5,7 @@ from pydub import AudioSegment
 import sqlite3
 import os
 
-API_TOKEN = '7894814699:AAGdnigZCSkXCfA5i0xO3-qBUnNm75Q5VXs'
+API_TOKEN = '' # сюда должен быть вставлен токен бота
 bot = telebot.TeleBot(API_TOKEN)
 
 # Создаем или подключаемся к базе данных
